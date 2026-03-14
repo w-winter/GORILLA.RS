@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gorillas — QBASIC fidelity port</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #000;
+        color: #d9d9d9;
+        font: 16px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        overflow: hidden;
+      }
+
+      main {
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .frame {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        display: grid;
+        place-items: center;
+      }
+
+      #glcanvas {
+        display: block;
+        width: min(100vw, calc(100vh * 640 / 350));
+        height: min(100vh, calc(100vw * 350 / 640));
+        aspect-ratio: 640 / 350;
+        background: #000;
+        outline: none;
+      }
+
+      .status,
+      .hint {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+        padding: 6px 10px;
+        background: rgba(0, 0, 0, 0.45);
+        border-radius: 6px;
+        pointer-events: none;
+      }
+
+      .status {
+        top: 12px;
+        color: #b8b8b8;
+      }
+
+      .hint {
+        bottom: 12px;
+        color: #8e8e8e;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="frame">
+        <canvas id="glcanvas" tabindex="1" aria-label="Gorillas game canvas"></canvas>
+        <div id="status" class="status">Loading WebAssembly build…</div>
+        <noscript class="status">This build requires JavaScript and WebAssembly</noscript>
+      </div>
+    </main>
+
+    <script src="vendor/mq_js_bundle.js"></script>
+    <script>
+      const statusNode = document.getElementById("status");
+      const STARTUP_FAILURE_MESSAGE =
+        "Failed to start the browser build. Check the console for details.";
+
+      const installMiniquadFramebufferBindings = () => {
+        if (typeof importObject === "undefined" || !importObject?.env) {
+          throw new Error("Macroquad loader did not initialize importObject.env");
+        }
+
+        // Vendored Macroquad/miniquad web loader version 2 omits these framebuffer imports;
+        // without them, the browser build hits missing-entry-point failures during runtime effects
+        importObject.env.glFramebufferRenderbuffer ??= (
+          target,
+          attachment,
+          renderbufferTarget,
+          renderbuffer
+        ) => {
+          GL.validateGLObjectID(
+            GL.renderbuffers,
+            renderbuffer,
+            "glFramebufferRenderbuffer",
+            "renderbuffer"
+          );
+          gl.framebufferRenderbuffer(
+            target,
+            attachment,
+            renderbufferTarget,
+            GL.renderbuffers[renderbuffer]
+          );
+        };
+
+        importObject.env.glCheckFramebufferStatus ??= (target) => gl.checkFramebufferStatus(target);
+        importObject.env.glBlitFramebuffer ??= (
+          srcX0,
+          srcY0,
+          srcX1,
+          srcY1,
+          dstX0,
+          dstY0,
+          dstX1,
+          dstY1,
+          mask,
+          filter
+        ) => {
+          gl.blitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
+        };
+      };
+
+      const installStartupStatusHandlers = () => {
+        const originalConsoleError = console.error.bind(console);
+        const originalRequestAnimationFrame = window.requestAnimationFrame.bind(window);
+        let startupSettled = false;
+
+        const restore = () => {
+          console.error = originalConsoleError;
+          window.requestAnimationFrame = originalRequestAnimationFrame;
+        };
+
+        const markReady = () => {
+          if (startupSettled) {
+            return;
+          }
+
+          startupSettled = true;
+          statusNode.hidden = true;
+          restore();
+        };
+
+        const markFailed = () => {
+          if (startupSettled) {
+            return;
+          }
+
+          startupSettled = true;
+          statusNode.hidden = false;
+          statusNode.textContent = STARTUP_FAILURE_MESSAGE;
+          restore();
+        };
+
+        console.error = (...args) => {
+          originalConsoleError(...args);
+          markFailed();
+        };
+
+        window.requestAnimationFrame = (callback) =>
+          originalRequestAnimationFrame((timestamp) => {
+            markReady();
+            callback(timestamp);
+          });
+
+        return { markFailed };
+      };
+
+      const startGame = () => {
+        statusNode.hidden = false;
+        statusNode.textContent = "Starting…";
+
+        const startupStatus = installStartupStatusHandlers();
+
+        try {
+          installMiniquadFramebufferBindings();
+          load("gorillas.wasm");
+        } catch (error) {
+          startupStatus.markFailed();
+          console.error(error);
+        }
+      };
+
+      window.addEventListener("load", startGame, { once: true });
+    </script>
+  </body>
+</html>

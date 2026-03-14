@@ -1,0 +1,14 @@
+Gorillas
+Copyright (c) 2026 Warren Winter
+
+This repository is a Rust port of IBM/Microsoft QBASIC `GORILLA.BAS`.
+
+Scope of claim:
+- The MIT OR Apache-2.0 licensing in this repository applies only to original code and other repository-authored material contributed to this repository
+- No claim is made over Microsoft's original 1991 QBASIC `GORILLA.BAS` program or other third-party material
+
+Acknowledgement:
+- The original QBASIC `GORILLA.BAS` program was published by Microsoft Corporation in 1991
+- Microsoft retains copyright in the original QBASIC source and related original materials
+
+Reference-derived embedded data and vendored third-party assets are documented in `THIRDPARTY.md`.

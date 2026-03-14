@@ -1,0 +1,11 @@
+# Rust build output
+/target/
+
+# Python bytecode
+__pycache__/
+
+# macOS
+.DS_Store
+
+# Local browser build output
+/site/

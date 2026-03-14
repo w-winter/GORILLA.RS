@@ -1,0 +1,6 @@
+[target.aarch64-unknown-linux-gnu]
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update",
+    "apt-get install -y libasound2-dev:$CROSS_DEB_ARCH libgl1-mesa-dev:$CROSS_DEB_ARCH libx11-dev:$CROSS_DEB_ARCH libxcursor-dev:$CROSS_DEB_ARCH libxi-dev:$CROSS_DEB_ARCH libxinerama-dev:$CROSS_DEB_ARCH libxrandr-dev:$CROSS_DEB_ARCH"
+]
